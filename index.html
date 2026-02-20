@@ -81,7 +81,7 @@ bpTr:"BP Trend (14 days)",sTr:"Sugar Trend (14 days)",tr:"Trends",ncd:"Start log
 ln:"\u4e2d\u6587",sv:"Save",cn:"Cancel",
 meds:"Medications",addM:"+ Add medication",noM:"No medications added yet",
 labs:"Lab Results",addL:"+ Add result",noL:"No lab results yet",
-exp:"\ud83d\udcc4 Export for Clinic",mr:"More",sn2:"Your Name",snP:"e.g. Mum / Dad / Ah Ma",eb:"\ud83d\udce7 Email Backup",cgN:"Caregiver Name",cgP:"e.g. Dr. Tan / Shun Herng / Pharmacy",
+exp:"\ud83d\udcc4 Export for Clinic",mr:"More",sn2:"Your Name",snP:"e.g. Mum / Dad / Ah Ma",eb:"\ud83d\udce7 Email Backup",cgN:"Caregiver Name",cgP:"e.g. Dr. Tan / Pharmacist name",
 mp:{bk:"e.g. Roti canai + teh-O",lu:"e.g. Nasi + ikan bakar",dn:"e.g. Porridge + fish",sn:"e.g. Apple, nuts"},
 ep:"e.g. Evening walk",ne:"No exercise today",exTr:"Exercise Trend",np:"Any notes...",
 mPh:{n:"e.g. Amlodipine",d:"e.g. 5mg",f:"e.g. Once daily",t:"e.g. Morning"}
@@ -121,7 +121,7 @@ bpTr:"Trend TD (14 hari)",sTr:"Trend Gula (14 hari)",exTr:"Trend Senaman",tr:"Tr
 ln:"EN",sv:"Simpan",cn:"Batal",ne:"Tiada senaman hari ini",
 meds:"Ubat-ubatan",addM:"+ Tambah ubat",noM:"Belum ada ubat ditambah",
 labs:"Keputusan Makmal",addL:"+ Tambah keputusan",noL:"Belum ada keputusan makmal",
-exp:"\ud83d\udcc4 Eksport untuk Klinik",mr:"Lagi",sn2:"Nama Anda",snP:"cth. Mak / Ayah",eb:"\ud83d\udce7 Emel sandaran",cgN:"Nama Penjaga",cgP:"cth. Dr. Tan / Shun Herng / Farmasi",
+exp:"\ud83d\udcc4 Eksport untuk Klinik",mr:"Lagi",sn2:"Nama Anda",snP:"cth. Mak / Ayah",eb:"\ud83d\udce7 Emel sandaran",cgN:"Nama Penjaga",cgP:"cth. Dr. Tan / Pharmacist / Farmasi",
 mp:{bk:"cth. Roti canai + teh-O",lu:"cth. Nasi + ikan bakar",dn:"cth. Bubur + ikan",sn:"cth. Epal, kacang"},
 ep:"cth. Jalan petang",np:"Sebarang nota...",
 mPh:{n:"cth. Amlodipine",d:"cth. 5mg",f:"cth. Sekali sehari",t:"cth. Pagi"}}};
@@ -254,7 +254,7 @@ function checkStreakCelebration(){
 function toggleSync(){
   var shURL=LS.g("ht-sheet");
   if(shURL){
-    if(confirm(lang==="zh"?"\u786e\u5b9a\u65ad\u5f00\u6570\u636e\u540c\u6b65\uff1f\u60a8\u7684\u7167\u987e\u8005\u5c06\u65e0\u6cd5\u770b\u5230\u65b0\u6570\u636e\u3002":lang==="ms"?"Pasti putuskan segerak data? Penjaga anda tidak akan dapat melihat data baru.":"Disconnect data sync? Your caregiver won\'t see new data.")){
+    if(confirm(lang==="zh"?"\u786e\u5b9a\u65ad\u5f00\u6570\u636e\u540c\u6b65\uff1f\u60a8\u7684\u7167\u987e\u8005\u5c06\u65e0\u6cd5\u770b\u5230\u65b0\u6570\u636e\u3002":lang==="ms"?"Pasti putuskan segerak data? Penjaga anda tidak akan dapat melihat data baru.":"Disconnect data sync? Pharmacy won\'t see new data.")){
       LS.s("ht-sheet","");LS.s("ht-sheet-off",true);render()}}
   else{
     LS.s("ht-sheet","https://script.google.com/macros/s/AKfycbwBR1eBjkFa64vOK1-6Z-Il7uEDEJOChv_UqIb9uz1AbxWxjAyasGpO1rqLPEbsJa90/exec");LS.s("ht-sheet-off","");render()}}
@@ -595,7 +595,7 @@ function render(){try{
     h+='</div></div>';
     // Caregiver sync notice
     h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u5065\u5eb7\u6570\u636e\u540c\u6b65":lang==="ms"?"Segerak Data Kesihatan":"Health Data Sharing")+'</div>';
-    var cgName=LS.g("ht-cg")||"your caregiver";
+    var cgName=lang==="zh"?"\u836f\u623f":lang==="ms"?"farmasi":"your pharmacy";
     h+='<div style="font-size:13px;line-height:1.6;color:#2D2D2D;margin-bottom:10px">';
     var cgN=esc(cgName);
     h+=(lang==="zh"?"\u60a8\u7684\u5065\u5eb7\u6570\u636e\u5c06\u81ea\u52a8\u540c\u6b65\u5230 <b>"+cgN+"</b> \u7684\u8868\u683c\u3002":lang==="ms"?"Data kesihatan anda akan disegerakkan ke jadual <b>"+cgN+"</b>.":"Your health data will sync to <b>"+cgN+"</b> so they can monitor your health.")+"</div>";
@@ -745,7 +745,7 @@ function render(){try{
     h+='<div class="cd"><div class="ct">\u2601\ufe0f '+(lang==="zh"?"\u6570\u636e\u540c\u6b65":lang==="ms"?"Segerak Data":"Data Sync")+'</div>';
     var syncOn=!!LS.g("ht-sheet");
     h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
-    h+='<span style="font-size:13px;font-weight:600">'+(lang==="zh"?"\u540c\u6b65\u5230\u7167\u987e\u8005":lang==="ms"?"Segerak ke penjaga":"Sync to caregiver")+'</span>';
+    h+='<span style="font-size:13px;font-weight:600">'+(lang==="zh"?"\u540c\u6b65\u5230\u836f\u623f":lang==="ms"?"Segerak ke farmasi":"Sync to pharmacy")+'</span>';
     h+='<button onclick="toggleSync()" style="padding:6px 16px;border-radius:8px;border:1.5px solid '+(syncOn?"#4CAF50":"#E8E4DC")+';background:'+(syncOn?"#E8F5E9":"#FAFAF8")+';color:'+(syncOn?"#4CAF50":"#8A8A8A")+';font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">'+(syncOn?(lang==="zh"?"\u5df2\u8fde\u63a5 \u2705":lang==="ms"?"Disambungkan \u2705":"Connected \u2705"):(lang==="zh"?"\u5df2\u65ad\u5f00":lang==="ms"?"Diputuskan":"Disconnected"))+'</button></div>';
     h+='<div style="font-size:11px;color:#8A8A8A;line-height:1.5">'+(lang==="zh"?"\u60a8\u7684\u5065\u5eb7\u6570\u636e\u4f1a\u81ea\u52a8\u540c\u6b65\u5230\u60a8\u7684\u7167\u987e\u8005\u7684Google\u8868\u683c\u3002\u60a8\u53ef\u4ee5\u968f\u65f6\u65ad\u5f00\u8fde\u63a5\u3002":lang==="ms"?"Data kesihatan anda disegerakkan secara automatik ke Google Sheet penjaga anda. Anda boleh putuskan sambungan bila-bila masa.":"Your health data auto-syncs to your caregiver\'s Google Sheet. You can disconnect anytime.")+'</div></div>';
     h+='<div class="cd"><div class="ct">\u2601\ufe0f Google Sheets '+(lang==="zh"?"\u81ea\u5b9a\u4e49\u7f51\u5740":lang==="ms"?"URL Kustom":"Custom URL")+'</div>';
@@ -917,7 +917,7 @@ function render(){try{
   h+='</div>';
   // Sync indicator
   var shURL=LS.g("ht-sheet");
-  if(shURL)h+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;font-size:11px;color:#4CAF50"><span>\u2601\ufe0f</span> '+(lang==="zh"?"\u5df2\u540c\u6b65\u5230\u7167\u987e\u8005":lang==="ms"?"Disegerakkan ke penjaga":"Synced to caregiver")+'</div>';
+  if(shURL)h+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;font-size:11px;color:#4CAF50"><span>\u2601\ufe0f</span> '+(lang==="zh"?"\u5df2\u540c\u6b65\u5230\u836f\u623f":lang==="ms"?"Disegerakkan ke farmasi":"Synced to pharmacy")+'</div>';
   else h+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;font-size:11px;color:#C4C0B8"><span>\u2601\ufe0f</span> '+(lang==="zh"?"\u672a\u8fde\u63a5":lang==="ms"?"Tidak disambung":"Not connected")+'</div>';
   // Buttons
   // Meds reminder on home
@@ -1077,6 +1077,7 @@ document.addEventListener("touchend",function(e){
   }
   }
 },{passive:true});
+if(!LS.g("ht-setup")&&!uname)view="setup";
 render();
 // Weekly auto-backup check
 (function(){var lb=LS.g("ht-lastbackup")||"";var now=td();var email=LS.g("ht-email");
