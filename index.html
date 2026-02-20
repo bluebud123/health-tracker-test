@@ -207,6 +207,7 @@ function pharmacistVerify(){
   if(anyPending){LS.s("ht-ph-redeemed",redeemed);
     var t=document.getElementById("toast");t.textContent="\u2705 "+(lang==="zh"?"\u5df2\u9a8c\u8bc1":"Verified!");t.style.background="#4CAF50";t.classList.add("show");setTimeout(function(){t.classList.remove("show");t.style.background=""},2000);render()}
   else{alert(lang==="zh"?"\u6ca1\u6709\u5f85\u9a8c\u8bc1\u7684\u5151\u6362":"No pending redemptions to verify")}}
+function setLang(l){lang=l;LS.s("ht-l",lang);render()}
 function togMed(){if(!data[sel])data[sel]=eE();data[sel].medsTaken=!data[sel].medsTaken;save();render()}
 function togSymp(s){if(!data[sel])data[sel]=eE();var arr=data[sel].symptoms||[];var idx=arr.indexOf(s);if(idx>=0)arr.splice(idx,1);else arr.push(s);data[sel].symptoms=arr;save();render()}
 function voiceField(field){
@@ -574,17 +575,12 @@ function render(){try{
     h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u8bed\u8a00":lang==="ms"?"Bahasa":"Language")+'</div>';
     h+='<div style="display:flex;gap:8px">';
     var lngs=[["en","English"],["zh","\u4e2d\u6587"],["ms","Bahasa Melayu"]];
-    for(var li=0;li<lngs.length;li++){var ln=lngs[li];
-      h+='<button onclick="lang=\''+ln[0]+"\';save();render()"+' style="flex:1;padding:12px;border-radius:10px;border:1.5px solid '+(lang===ln[0]?'#3B7A6B':'#E8E4DC')+';background:'+(lang===ln[0]?'#E8F2EF':'#fff')+';font-weight:700;color:'+(lang===ln[0]?'#3B7A6B':'#8A8A8A')+';cursor:pointer;font-family:inherit">'+ln[1]+'</button>';}
+    for(var li=0;li<lngs.length;li++){var ln=lngs[li];var isL=lang===ln[0];
+      h+='<button onclick="setLang(\x27'+ln[0]+'\x27)" style="flex:1;padding:14px;border-radius:12px;border:2px solid '+(isL?'#3B7A6B':'#E8E4DC')+';background:'+(isL?'#3B7A6B':'#fff')+';font-weight:800;font-size:15px;color:'+(isL?'#fff':'#8A8A8A')+';cursor:pointer;font-family:inherit">'+ln[1]+'</button>';}
     h+='</div></div>';
     // Name
     h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u4f60\u662f\u8c01\uff1f":lang==="ms"?"Siapa anda?":"Who is using this?")+'</div>';
-    var names=lang==="zh"?["\u5988\u5988","\u7238\u7238","\u59d1\u59d1"]:lang==="ms"?["Mak","Ayah","Makcik"]:["Mum","Dad","Aunty"];
-    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
-    for(var ni=0;ni<names.length;ni++){var isN=uname===names[ni];
-      h+='<button onclick="uname=\''+names[ni]+"\';LS.s(\'ht-n\',uname);render()"+' style="flex:1;min-width:70px;padding:10px;border-radius:10px;border:1.5px solid '+(isN?'#3B7A6B':'#E8E4DC')+';background:'+(isN?'#E8F2EF':'#fff')+';font-weight:700;font-size:15px;color:'+(isN?'#3B7A6B':'#8A8A8A')+';cursor:pointer;font-family:inherit">'+names[ni]+'</button>';}
-    h+='</div>';
-    h+='<input class="inp" value="'+esc(uname)+'" placeholder="'+(lang==="zh"?"\u6216\u8f93\u5165\u4f60\u7684\u540d\u5b57":lang==="ms"?"Atau taip nama anda":"Or type your name")+'" onchange="uname=this.value;LS.s(\'ht-n\',uname)">';
+    h+='<input class="inp" value="'+esc(uname)+'" placeholder="'+(lang==="zh"?"\u8f93\u5165\u540d\u5b57":lang==="ms"?"Taip nama anda":"Type your name")+'" oninput="uname=this.value;LS.s(\'ht-n\',uname)" style="font-size:16px;padding:14px">';
     h+='</div>';
     // Font size
     h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u5b57\u4f53\u5927\u5c0f":lang==="ms"?"Saiz huruf":"Text size")+'</div>';
@@ -604,11 +600,11 @@ function render(){try{
     h+='<span style="font-size:12px;color:#3B7A6B;font-weight:600">'+(lang==="zh"?"\u5df2\u8fde\u63a5 \u2014 \u60a8\u53ef\u4ee5\u968f\u65f6\u5728\u8bbe\u7f6e\u4e2d\u65ad\u5f00\u8fde\u63a5":lang==="ms"?"Disambungkan \u2014 anda boleh putuskan sambungan di tetapan bila-bila masa":"Connected \u2014 you can disconnect anytime in Settings")+'</span></div>';
     h+='</div>';
     // Start button
-    h+='<button onclick="LS.s(\'ht-setup\',true);nav(\'home\')" style="width:100%;padding:16px;background:#3B7A6B;color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:12px">'+(lang==="zh"?"\u5f00\u59cb\u8ddf\u8e2a\u5065\u5eb7 \u27a1\ufe0f":lang==="ms"?"Mula Jejak Kesihatan \u27a1\ufe0f":"Start Tracking \u27a1\ufe0f")+'</button>';
+    h+='<button onclick="LS.s(\'ht-setup\',true);view=\'home\';render()" style="width:100%;padding:16px;background:#3B7A6B;color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:12px">'+(lang==="zh"?"\u5f00\u59cb\u8ddf\u8e2a\u5065\u5eb7 \u27a1\ufe0f":lang==="ms"?"Mula Jejak Kesihatan \u27a1\ufe0f":"Start Tracking \u27a1\ufe0f")+'</button>';
     h+='</div>';el.innerHTML=h;applyFontSize();return;
   }
 
-  var t=T(),el=document.getElementById("app"),e=data[sel]||eE();
+  var t=T(),e=data[sel]||eE();
 
   if(view==="entry"){
     var iT=sel===td(),hasD=e.bpMornSys||e.fastingSugar||e.medsTaken||e.breakfast;
