@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KawanSihat Family Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#F5F5F0;color:#2D2D2D;min-height:100vh}
+.hd{background:linear-gradient(135deg,#3B7A6B,#2D6155);color:#fff;padding:24px 16px;text-align:center}
+.hd h1{font-size:22px;font-weight:800;margin-bottom:4px}
+.hd p{font-size:13px;opacity:.8}
+.setup{max-width:480px;margin:20px auto;padding:16px}
+.setup input{width:100%;padding:14px;border:2px solid #E8E4DC;border-radius:12px;font-size:14px;font-family:inherit;margin:8px 0}
+.setup button{width:100%;padding:14px;background:#3B7A6B;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px}
+.cards{max-width:600px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;border:1.5px solid #E8E4DC}
+.card-name{font-size:18px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;gap:10px;margin-bottom:8px}
+.stat{flex:1;padding:10px;border-radius:10px;text-align:center}
+.stat .val{font-size:18px;font-weight:800}
+.stat .lbl{font-size:10px;font-weight:600;opacity:.7;margin-top:2px}
+.ok{background:#E8F5E9;color:#2E7D32}
+.wn{background:#FFF8E1;color:#F57F17}
+.bd{background:#FDEAEA;color:#C62828}
+.nu{background:#FAFAF8;color:#C4C0B8}
+.tabs{display:flex;gap:8px;max-width:600px;margin:16px auto 0;padding:0 16px}
+.tab{flex:1;padding:10px;border-radius:10px;border:1.5px solid #E8E4DC;background:#fff;font-weight:700;cursor:pointer;font-family:inherit;color:#8A8A8A;font-size:13px}
+.tab.active{border-color:#3B7A6B;background:#E8F2EF;color:#3B7A6B}
+.days{display:flex;gap:4px}
+.day{flex:1;text-align:center;padding:6px 2px;border-radius:8px;font-size:10px;font-weight:600}
+.day.ok{background:#E8F5E9;color:#2E7D32}
+.day.miss{background:#FDEAEA;color:#C62828}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:#F5F5F0;padding:8px 6px;text-align:left;font-weight:700;border-bottom:2px solid #E8E4DC}
+.tbl td{padding:8px 6px;border-bottom:1px solid #E8E4DC}
+.ts{text-align:center;font-size:11px;color:#C4C0B8;padding:10px}
+.mood-bar{display:flex;gap:2px;margin-top:6px}
+.mood-dot{width:20px;height:20px;text-align:center;font-size:12px}
+.alert-card{background:#FDEAEA;border:1.5px solid #D94F4F;border-radius:12px;padding:12px;margin-bottom:12px}
+.alert-card .title{font-weight:700;color:#D94F4F;font-size:13px;margin-bottom:4px}
+.alert-card .msg{font-size:12px;color:#2D2D2D}
+.journal-card{background:#F5F0EB;border-radius:10px;padding:10px;margin-top:8px;font-size:12px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hd">
+<h1>&#x1F91D; KawanSihat</h1>
+<p>Family Health Dashboard</p>
+</div>
+<div id="content">
+<div class="setup">
+<h3 style="margin-bottom:8px">Connect to Family Health Data</h3>
+<p style="font-size:13px;color:#8A8A8A;margin-bottom:12px">Paste your Google Apps Script URL below (same URL used in the app)</p>
+<input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
+<button onclick="connect()">Connect</button>
+<p style="font-size:11px;color:#C4C0B8;margin-top:12px;line-height:1.5">
+This is the same URL from your KawanSihat app settings.<br>No publishing needed &#x2014; data stays private.</p>
+</div>
+</div>
+<script>
+var SCRIPT_URL = localStorage.getItem("dash-script-url") || "";
+var allData = [];
+var viewTab = "overview";
+
+function connect() {
+  var url = document.getElementById("sheetUrl").value.trim();
+  if (!url) return;
+  localStorage.setItem("dash-script-url", url);
+  SCRIPT_URL = url;
+  loadData();
+}
+
+function loadData() {
+  document.getElementById("content").innerHTML = '<div style="text-align:center;padding:40px;color:#8A8A8A">Loading...</div>';
+  
+  // Use XMLHttpRequest - handles Apps Script redirects better than fetch
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", SCRIPT_URL + "?action=read", true);
+  xhr.onload = function() {
+    try {
+      var json;
+      try { json = JSON.parse(xhr.responseText); }
+      catch(pe) {
+        // Apps Script sometimes wraps response - extract JSON
+        var m = xhr.responseText.match(/\{[\s\S]*\}/);
+        if (m) json = JSON.parse(m[0]);
+        else throw new Error("Invalid response. Please check Apps Script is v5 and redeployed.");
+      }
+      if (json.status === "ok" && json.data) {
+        allData = json.data;
+        if (!allData.length) {
+          document.getElementById("content").innerHTML = '<div style="text-align:center;padding:40px;color:#8A8A8A">No data yet. Start logging in KawanSihat app!</div>';
+          return;
+        }
+        renderDashboard();
+      } else {
+        throw new Error(json.message || "Unknown error");
+      }
+    } catch(e) {
+      document.getElementById("content").innerHTML = '<div style="text-align:center;padding:40px;color:#D94F4F">Failed: ' + e.message + '<br><br><button onclick="localStorage.removeItem(\'dash-script-url\');location.reload()" style="padding:10px 20px;border-radius:8px;border:1px solid #D94F4F;background:#fff;color:#D94F4F;cursor:pointer">Reset</button></div>';
+    }
+  };
+  xhr.onerror = function() {
+    document.getElementById("content").innerHTML = '<div style="text-align:center;padding:40px;color:#D94F4F">Network error. Check your connection.<br><br><button onclick="loadData()" style="padding:10px 20px;border-radius:8px;border:1.5px solid #3B7A6B;background:#E8F2EF;color:#3B7A6B;cursor:pointer;font-weight:700;margin:8px">Retry</button><button onclick="localStorage.removeItem(\'dash-script-url\');location.reload()" style="padding:10px 20px;border-radius:8px;border:1px solid #D94F4F;background:#fff;color:#D94F4F;cursor:pointer">Reset</button></div>';
+  };
+  xhr.send();
+}
+
+function findKey(obj, terms) {
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i].toLowerCase();
+    var match = true;
+    for (var j = 0; j < terms.length; j++) {
+      if (k.indexOf(terms[j]) < 0) { match = false; break; }
+    }
+    if (match) return keys[i];
+  }
+  return null;
+}
+
+function bp(v) { var n=+v; if(!n)return "nu"; return n>=160?"bd":n>=130?"wn":"ok"; }
+function su(v) { var n=+v; if(!n)return "nu"; return (n>=13.9||n<3.9)?"bd":n>=10.0?"wn":n<=7.2?"ok":"wn"; }
+function clr(s) { return {ok:"#4CAF50",wn:"#F57F17",bd:"#C62828"}[s]||"#2D2D2D"; }
+
+function renderDashboard() {
+  var sample = allData[0] || {};
+  var K = {
+    name: findKey(sample,["name"]) || "Name",
+    date: findKey(sample,["date"]) || "Date",
+    bpSys: findKey(sample,["morn","sys"]) || findKey(sample,["sys"]) || "Morn Sys",
+    bpDia: findKey(sample,["morn","dia"]) || findKey(sample,["dia"]) || "Morn Dia",
+    eveSys: findKey(sample,["eve","sys"]) || null,
+    eveDia: findKey(sample,["eve","dia"]) || null,
+    fasting: findKey(sample,["fasting"]) || "Fasting Sugar",
+    postMeal: findKey(sample,["post"]) || null,
+    exMin: findKey(sample,["exercise","min"]) || findKey(sample,["exercise"]) || "Exercise",
+    exType: findKey(sample,["exercise","type"]) || null,
+    meds: findKey(sample,["med"]) || "Meds",
+    mood: findKey(sample,["mood"]) || null,
+    symptoms: findKey(sample,["symptom"]) || null,
+    social: findKey(sample,["social"]) || findKey(sample,["who"]) || null,
+    activity: findKey(sample,["activit"]) || findKey(sample,["what"]) || null,
+    journal: findKey(sample,["journal"]) || null,
+    weight: findKey(sample,["weight"]) || null
+  };
+
+  var people = {};
+  for (var i = 0; i < allData.length; i++) {
+    var row = allData[i];
+    var name = row[K.name] || "Unknown";
+    if (!people[name]) people[name] = [];
+    people[name].push(row);
+  }
+
+  var h = "";
+  h += '<div class="tabs">';
+  h += '<button class="tab'+(viewTab==="overview"?" active":"")+'" onclick="viewTab=\'overview\';renderDashboard()">Overview</button>';
+  h += '<button class="tab'+(viewTab==="journal"?" active":"")+'" onclick="viewTab=\'journal\';renderDashboard()">Journal</button>';
+  h += '<button class="tab'+(viewTab==="table"?" active":"")+'" onclick="viewTab=\'table\';renderDashboard()">Details</button>';
+  h += '</div>';
+  h += '<div class="cards">';
+
+  // Alerts
+  for (var name in people) {
+    var rows = people[name].sort(function(a,b){return b[K.date].localeCompare(a[K.date])});
+    var latest = rows[0];
+    var bpVal = +(latest[K.bpSys]||0);
+    var suVal = +(latest[K.fasting]||0);
+    var daysAgo = 0;
+    if (latest[K.date]) {
+      var ld = new Date(latest[K.date]+"T00:00:00");
+      daysAgo = Math.floor((new Date()-ld)/864e5);
+    }
+    if (bpVal >= 160 || suVal >= 13.9) {
+      h += '<div class="alert-card"><div class="title">&#x26A0;&#xFE0F; '+name+' &#x2014; Critical Reading</div>';
+      h += '<div class="msg">';
+      if (bpVal>=160) h += 'BP: <b>'+latest[K.bpSys]+'/'+latest[K.bpDia]+'</b> mmHg ';
+      if (suVal>=13.9) h += 'Sugar: <b>'+latest[K.fasting]+'</b> mmol/L ';
+      h += '('+latest[K.date]+')</div></div>';
+    }
+    if (daysAgo >= 2) {
+      h += '<div class="alert-card"><div class="title">&#x23F0; '+name+' &#x2014; No data for '+daysAgo+' days</div>';
+      h += '<div class="msg">Last logged: '+latest[K.date]+'</div></div>';
+    }
+  }
+
+  if (viewTab === "overview") {
+    for (var name in people) {
+      var rows = people[name].sort(function(a,b){return b[K.date].localeCompare(a[K.date])});
+      var latest = rows[0];
+      var last7 = rows.slice(0,7);
+
+      h += '<div class="card">';
+      h += '<div class="card-name">&#x1F464; '+name+'</div>';
+
+      var bpS = latest[K.bpSys] || (K.eveSys ? latest[K.eveSys] : "");
+      var bpD = latest[K.bpDia] || (K.eveDia ? latest[K.eveDia] : "");
+      var suF = latest[K.fasting];
+      h += '<div class="row">';
+      h += '<div class="stat '+bp(bpS)+'"><div class="val">'+(bpS?bpS+"/"+bpD:"-")+'</div><div class="lbl">BP mmHg</div></div>';
+      h += '<div class="stat '+su(suF)+'"><div class="val">'+(suF||"-")+'</div><div class="lbl">Sugar mmol/L</div></div>';
+      if (K.mood && latest[K.mood]) h += '<div class="stat nu"><div class="val">'+latest[K.mood]+'</div><div class="lbl">Mood</div></div>';
+      h += '</div>';
+
+      var bpArr=[],suArr=[],exCnt=0,medCnt=0,moodList=[];
+      for (var j=0;j<last7.length;j++) {
+        var r=last7[j];
+        var bv=+(r[K.bpSys])||(K.eveSys?+(r[K.eveSys]):0);
+        if(bv)bpArr.push(bv);
+        if(+(r[K.fasting]))suArr.push(+(r[K.fasting]));
+        if(+(r[K.exMin])>0)exCnt++;
+        if(r[K.meds]==="Yes"||r[K.meds]==="true")medCnt++;
+        if(K.mood&&r[K.mood])moodList.push(r[K.mood]);
+      }
+      var avgBP=bpArr.length?Math.round(bpArr.reduce(function(a,b){return a+b},0)/bpArr.length):0;
+      var avgSU=suArr.length?(suArr.reduce(function(a,b){return a+b},0)/suArr.length).toFixed(1):0;
+
+      h += '<div style="font-size:12px;color:#8A8A8A;margin:8px 0 4px">7-day summary</div>';
+      h += '<div class="row">';
+      h += '<div class="stat '+bp(avgBP)+'"><div class="val">'+(avgBP||"-")+'</div><div class="lbl">Avg BP</div></div>';
+      h += '<div class="stat '+su(avgSU)+'"><div class="val">'+(avgSU||"-")+'</div><div class="lbl">Avg Sugar</div></div>';
+      h += '<div class="stat ok"><div class="val">'+exCnt+'/7</div><div class="lbl">Exercise</div></div>';
+      h += '<div class="stat ok"><div class="val">'+medCnt+'/7</div><div class="lbl">Meds</div></div>';
+      h += '</div>';
+
+      if (moodList.length) {
+        h += '<div class="mood-bar">';
+        for (var mi=0;mi<moodList.length;mi++) h += '<div class="mood-dot">'+moodList[mi]+'</div>';
+        h += '</div>';
+      }
+
+      var sympCounts={};
+      for (var j=0;j<last7.length;j++) {
+        var sv=K.symptoms?last7[j][K.symptoms]:"";
+        if (sv) {
+          var sarr=sv.split(",");
+          for(var si=0;si<sarr.length;si++){var s=sarr[si].trim();if(s)sympCounts[s]=(sympCounts[s]||0)+1;}
+        }
+      }
+      var sympKeys=Object.keys(sympCounts);
+      if (sympKeys.length) {
+        h += '<div style="margin-top:6px;font-size:11px;color:#D94F4F">&#x26A0;&#xFE0F; ';
+        for (var si=0;si<sympKeys.length;si++) h += (si>0?", ":"")+sympKeys[si]+" ("+sympCounts[sympKeys[si]]+"x)";
+        h += '</div>';
+      }
+
+      h += '<div style="font-size:12px;color:#8A8A8A;margin:8px 0 4px">Last 7 days</div>';
+      h += '<div class="days">';
+      var logged={};
+      for (var j=0;j<rows.length;j++) logged[rows[j][K.date]]=true;
+      for (var j=6;j>=0;j--) {
+        var d=new Date();d.setDate(d.getDate()-j);
+        var dk=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+        var dayL=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()];
+        h += '<div class="day '+(logged[dk]?"ok":"miss")+'">'+dayL+'</div>';
+      }
+      h += '</div>';
+      h += '<div style="font-size:11px;color:#C4C0B8;margin-top:10px">Last sync: '+(latest[K.date]||"?")+'</div>';
+      h += '</div>';
+    }
+  } else if (viewTab === "journal") {
+    for (var name in people) {
+      var rows = people[name].sort(function(a,b){return b[K.date].localeCompare(a[K.date])});
+      h += '<div class="card">';
+      h += '<div class="card-name">&#x1F4D3; '+name+'</div>';
+      var shown = 0;
+      for (var j=0;j<rows.length&&shown<14;j++) {
+        var r=rows[j];
+        var hasMood=K.mood&&r[K.mood];
+        var hasSymp=K.symptoms&&r[K.symptoms];
+        var hasSocial=K.social&&r[K.social];
+        var hasAct=K.activity&&r[K.activity];
+        var hasJournal=K.journal&&r[K.journal];
+        if(!hasMood&&!hasSymp&&!hasSocial&&!hasAct&&!hasJournal)continue;
+        shown++;
+        h += '<div class="journal-card">';
+        h += '<div style="font-weight:700;margin-bottom:4px">'+r[K.date];
+        if(hasMood)h += ' '+r[K.mood];
+        h += '</div>';
+        if(hasSymp)h += '<div style="color:#D94F4F">&#x26A0;&#xFE0F; '+r[K.symptoms]+'</div>';
+        if(hasSocial)h += '<div>&#x1F465; '+r[K.social]+'</div>';
+        if(hasAct)h += '<div>&#x1F4CD; '+r[K.activity]+'</div>';
+        if(hasJournal)h += '<div style="margin-top:4px;color:#5A5A5A;font-style:italic">&#x1F4DD; '+r[K.journal]+'</div>';
+        h += '</div>';
+      }
+      if(!shown) h += '<div style="text-align:center;color:#C4C0B8;padding:20px;font-style:italic">No journal entries yet</div>';
+      h += '</div>';
+    }
+  } else {
+    for (var name in people) {
+      var rows = people[name].sort(function(a,b){return b[K.date].localeCompare(a[K.date])});
+      h += '<div class="card">';
+      h += '<div class="card-name">&#x1F464; '+name+'</div>';
+      h += '<div style="overflow-x:auto"><table class="tbl">';
+      h += '<tr><th>Date</th><th>BP</th><th>Sugar</th><th>Ex</th><th>Meds</th><th>Mood</th></tr>';
+      for (var j=0;j<Math.min(rows.length,30);j++) {
+        var r=rows[j];
+        var bpV=r[K.bpSys]||(K.eveSys?r[K.eveSys]:"");
+        var bpDV=r[K.bpDia]||(K.eveDia?r[K.eveDia]:"");
+        h += '<tr>';
+        h += '<td>'+((r[K.date]||"").slice(5))+'</td>';
+        h += '<td style="color:'+clr(bp(bpV))+'">'+(bpV?bpV+"/"+bpDV:"-")+'</td>';
+        h += '<td style="color:'+clr(su(r[K.fasting]))+'">'+(r[K.fasting]||"-")+'</td>';
+        h += '<td>'+(+(r[K.exMin])>0?r[K.exMin]+"m":"-")+'</td>';
+        h += '<td>'+((r[K.meds]==="Yes"||r[K.meds]==="true")?"&#x2705;":"&#x274C;")+'</td>';
+        h += '<td>'+(K.mood&&r[K.mood]?r[K.mood]:"-")+'</td>';
+        h += '</tr>';
+      }
+      h += '</table></div></div>';
+    }
+  }
+
+  h += '</div>';
+  h += '<div class="ts">Last refreshed: '+new Date().toLocaleTimeString()+'</div>';
+  h += '<div style="text-align:center;padding:10px"><button onclick="loadData()" style="padding:10px 20px;border-radius:8px;border:1.5px solid #3B7A6B;background:#E8F2EF;color:#3B7A6B;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;margin-right:8px">&#x27F3; Refresh</button>';
+  h += '<button onclick="localStorage.removeItem(\'dash-script-url\');location.reload()" style="padding:10px 20px;border-radius:8px;border:1px solid #D94F4F;background:#fff;color:#D94F4F;cursor:pointer;font-size:12px;font-family:inherit">Disconnect</button></div>';
+
+  document.getElementById("content").innerHTML = h;
+}
+
+if (SCRIPT_URL) {
+  document.getElementById("sheetUrl").value = SCRIPT_URL;
+  loadData();
+}
+</script>
+</body>
+</html>
