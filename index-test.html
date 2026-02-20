@@ -188,6 +188,25 @@ function getDailyTarget(){
   if(e.mood)done++;
   return{done:done,total:total,perfect:done>=3,superstar:done>=4}}
 
+
+function redeemPharm(idx,cost){
+  if(pts<cost)return;
+  var redeemed=LS.g("ht-ph-redeemed")||{};
+  if(redeemed[idx])return;
+  var msg=lang==="zh"?"\u786e\u5b9a\u5151\u6362\u8fd9\u4e2a\u5956\u52b1\uff1f\u79ef\u5206\u5c06\u88ab\u6263\u9664\u3002":lang==="ms"?"Pasti tebus ganjaran ini? Mata akan ditolak.":"Redeem this reward? Points will be deducted.";
+  if(!confirm(msg))return;
+  pts-=cost;LS.s("ht-pts",pts);
+  redeemed[idx]={date:td(),verified:false};LS.s("ht-ph-redeemed",redeemed);
+  render()}
+function pharmacistVerify(){
+  var code=prompt(lang==="zh"?"\u8bf7\u8f93\u5165\u836f\u623f\u9a8c\u8bc1\u7801\uff1a":lang==="ms"?"Masukkan kod pengesahan farmasi:":"Enter pharmacy verification code:");
+  if(!code)return;
+  var redeemed=LS.g("ht-ph-redeemed")||{};
+  var anyPending=false;
+  for(var k in redeemed){if(!redeemed[k].verified){redeemed[k].verified=true;redeemed[k].pharmacist=code;redeemed[k].verifiedDate=td();anyPending=true}}
+  if(anyPending){LS.s("ht-ph-redeemed",redeemed);
+    var t=document.getElementById("toast");t.textContent="\u2705 "+(lang==="zh"?"\u5df2\u9a8c\u8bc1":"Verified!");t.style.background="#4CAF50";t.classList.add("show");setTimeout(function(){t.classList.remove("show");t.style.background=""},2000);render()}
+  else{alert(lang==="zh"?"\u6ca1\u6709\u5f85\u9a8c\u8bc1\u7684\u5151\u6362":"No pending redemptions to verify")}}
 function togMed(){if(!data[sel])data[sel]=eE();data[sel].medsTaken=!data[sel].medsTaken;save();render()}
 function togSymp(s){if(!data[sel])data[sel]=eE();var arr=data[sel].symptoms||[];var idx=arr.indexOf(s);if(idx>=0)arr.splice(idx,1);else arr.push(s);data[sel].symptoms=arr;save();render()}
 function voiceField(field){
@@ -238,7 +257,7 @@ function toggleSync(){
     if(confirm(lang==="zh"?"\u786e\u5b9a\u65ad\u5f00\u6570\u636e\u540c\u6b65\uff1f\u60a8\u7684\u7167\u987e\u8005\u5c06\u65e0\u6cd5\u770b\u5230\u65b0\u6570\u636e\u3002":lang==="ms"?"Pasti putuskan segerak data? Penjaga anda tidak akan dapat melihat data baru.":"Disconnect data sync? Your caregiver won\'t see new data.")){
       LS.s("ht-sheet","");LS.s("ht-sheet-off",true);render()}}
   else{
-    LS.s("ht-sheet","PASTE_YOUR_APPS_SCRIPT_URL_HERE");LS.s("ht-sheet-off","");render()}}
+    LS.s("ht-sheet","https://script.google.com/macros/s/AKfycbwBR1eBjkFa64vOK1-6Z-Il7uEDEJOChv_UqIb9uz1AbxWxjAyasGpO1rqLPEbsJa90/exec");LS.s("ht-sheet-off","");render()}}
 function togLang(){lang=lang==="en"?"zh":lang==="zh"?"ms":"en";save();render()}
 
 // Canvas chart
@@ -763,35 +782,54 @@ function render(){try{
 
   if(view==="pharmacy"){
     recalcPts();
+    var stk=0;for(var si=0;si<365;si++){var sd=new Date();sd.setDate(sd.getDate()-si);var sk=sd.getFullYear()+"-"+("0"+(sd.getMonth()+1)).slice(-2)+"-"+("0"+sd.getDate()).slice(-2);if(data[sk]&&(data[sk].bpMornSys||data[sk].fastingSugar||data[sk].medsTaken))stk++;else if(si>0)break}
+    var rank=getRank();
     h+='<div class="sh"><button class="bb" onclick="nav(\'home\')">\u2190</button><div style="flex:1;font-weight:800;font-size:17px">\ud83c\udfe5 '+(lang==="zh"?"\u836f\u623f\u5956\u52b1":lang==="ms"?"Ganjaran Farmasi":"Pharmacy Rewards")+'</div></div>';
     h+='<div style="padding:16px">';
-    // Show to pharmacist card
     h+='<div style="background:linear-gradient(135deg,#4CAF50,#2E7D32);border-radius:20px;padding:24px;color:#fff;text-align:center;margin-bottom:16px">';
-    h+='<div style="font-size:14px;opacity:.8">'+(lang==="zh"?"\u51fa\u793a\u7ed9\u836f\u5242\u5e08\u770b":lang==="ms"?"Tunjukkan kepada ahli farmasi":"Show to pharmacist")+'</div>';
-    h+='<div style="font-size:56px;font-weight:900;margin:12px 0">'+(uname||"Patient")+'</div>';
+    h+='<div style="font-size:14px;opacity:.8">'+(lang==="zh"?"\u51fa\u793a\u7ed9\u836f\u5242\u5e08\u9a8c\u8bc1":lang==="ms"?"Tunjukkan kepada ahli farmasi untuk pengesahan":"Show to pharmacist to verify")+'</div>';
+    h+='<div style="font-size:48px;font-weight:900;margin:12px 0">'+(uname||"Patient")+'</div>';
+    h+='<div style="font-size:18px;font-weight:700;margin-bottom:4px">'+rank.icon+' '+(lang==="zh"?rank.nz:lang==="ms"?rank.nm:rank.n)+'</div>';
     h+='<div style="font-size:16px;font-weight:700;margin-bottom:8px">\ud83c\udfc5 '+pts+' '+(lang==="zh"?"\u79ef\u5206":lang==="ms"?"mata":"points")+'</div>';
-    var stk=0;for(var si=0;si<365;si++){var sd=new Date();sd.setDate(sd.getDate()-si);var sk=sd.getFullYear()+"-"+("0"+(sd.getMonth()+1)).slice(-2)+"-"+("0"+sd.getDate()).slice(-2);if(data[sk]&&(data[sk].bpMornSys||data[sk].fastingSugar||data[sk].medsTaken))stk++;else if(si>0)break}
-    h+='<div style="font-size:36px;margin:8px 0">\ud83d\udd25 '+stk+(lang==="zh"?" \u5929\u8fde\u7eed":lang==="ms"?" hari berturut":" day streak")+'</div>';
-    h+='<div style="font-size:12px;opacity:.7;margin-top:8px">Device ID: '+deviceId+'</div>';
-    h+='<div style="font-size:11px;opacity:.5;margin-top:4px">'+new Date().toLocaleString()+'</div>';
+    h+='<div style="font-size:28px;margin:8px 0">\ud83d\udd25 '+stk+(lang==="zh"?" \u5929\u8fde\u7eed":lang==="ms"?" hari berturut":" day streak")+'</div>';
+    var d30=[];for(var di=0;di<30;di++){var dd=new Date();dd.setDate(dd.getDate()-di);d30.push(dd.getFullYear()+"-"+("0"+(dd.getMonth()+1)).slice(-2)+"-"+("0"+dd.getDate()).slice(-2))}
+    var logD=0,medD=0,bpD=0;for(var di=0;di<d30.length;di++){var de=data[d30[di]];if(de){logD++;if(de.medsTaken)medD++;if(de.bpMornSys||de.bpEveSys)bpD++}}
+    h+='<div style="display:flex;gap:12px;margin-top:12px">';
+    h+='<div style="flex:1;background:rgba(255,255,255,.2);border-radius:10px;padding:8px"><div style="font-size:20px;font-weight:800">'+logD+'/30</div><div style="font-size:10px;opacity:.8">'+(lang==="zh"?"\u8bb0\u5f55":lang==="ms"?"Direkod":"Logged")+'</div></div>';
+    h+='<div style="flex:1;background:rgba(255,255,255,.2);border-radius:10px;padding:8px"><div style="font-size:20px;font-weight:800">'+medD+'/30</div><div style="font-size:10px;opacity:.8">'+(lang==="zh"?"\u670d\u836f":lang==="ms"?"Ubat":"Meds")+'</div></div>';
+    h+='<div style="flex:1;background:rgba(255,255,255,.2);border-radius:10px;padding:8px"><div style="font-size:20px;font-weight:800">'+bpD+'/30</div><div style="font-size:10px;opacity:.8">BP</div></div>';
     h+='</div>';
-    // Reward tiers
-    h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u53ef\u5151\u6362\u5956\u52b1":lang==="ms"?"Ganjaran Boleh Ditebus":"Available Rewards")+'</div>';
+    h+='<div style="font-size:11px;opacity:.5;margin-top:10px">ID: '+deviceId+' \u00b7 '+new Date().toLocaleString()+'</div></div>';
+    h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u53ef\u5151\u6362\u5956\u52b1":lang==="ms"?"Ganjaran Boleh Ditebus":"Redeemable Rewards")+'</div>';
     var phRewards=[
-      {pts:50,n:lang==="zh"?"\u514d\u8d39\u8840\u538b\u68c0\u6d4b":lang==="ms"?"Pemeriksaan BP percuma":"Free BP check",icon:"\u2764\ufe0f"},
-      {pts:100,n:lang==="zh"?"\u836f\u623f\u4f18\u60e0\u52b85%":lang==="ms"?"Diskaun farmasi 5%":"5% pharmacy discount",icon:"\ud83d\udcb0"},
-      {pts:200,n:lang==="zh"?"\u514d\u8d39\u8840\u7cd6\u68c0\u6d4b":lang==="ms"?"Pemeriksaan gula percuma":"Free sugar test",icon:"\ud83e\ude78"},
-      {pts:500,n:lang==="zh"?"\u514d\u8d39\u5065\u5eb7\u68c0\u67e5":lang==="ms"?"Pemeriksaan kesihatan percuma":"Free health screening",icon:"\ud83c\udfe5"}];
-    for(var ri=0;ri<phRewards.length;ri++){var pr=phRewards[ri];var canRedeem=pts>=pr.pts;
-      h+='<div style="display:flex;align-items:center;padding:14px;background:'+(canRedeem?"#E8F5E9":"#FAFAF8")+';border-radius:12px;margin-bottom:8px;border:1.5px solid '+(canRedeem?"#4CAF50":"#E8E4DC")+'">';
-      h+='<span style="font-size:24px;margin-right:12px">'+pr.icon+'</span>';
-      h+='<div style="flex:1"><div style="font-weight:700">'+pr.n+'</div><div style="font-size:12px;color:#8A8A8A">'+pr.pts+' '+(lang==="zh"?"\u79ef\u5206":lang==="ms"?"mata":"pts")+'</div></div>';
-      if(canRedeem)h+='<span style="color:#4CAF50;font-size:20px">\u2705</span>';
-      else h+='<span style="font-size:12px;color:#C4C0B8">'+(pr.pts-pts)+' more</span>';
+      {pts:30,n:lang==="zh"?"\u514d\u8d39\u8840\u538b\u68c0\u6d4b":lang==="ms"?"Cek BP percuma":"Free BP check",icon:"\u2764\ufe0f",desc:lang==="zh"?"\u836f\u623f\u5185\u514d\u8d39\u8840\u538b\u6d4b\u91cf":lang==="ms"?"Ukur BP percuma di farmasi":"Free BP measurement at pharmacy"},
+      {pts:60,n:lang==="zh"?"\u514d\u8d39\u8840\u7cd6\u68c0\u6d4b":lang==="ms"?"Cek gula darah percuma":"Free blood sugar test",icon:"\ud83e\ude78",desc:lang==="zh"?"\u836f\u623f\u5185\u514d\u8d39\u8840\u7cd6\u68c0\u6d4b":lang==="ms"?"Ukur gula darah percuma":"Free glucose test at pharmacy"},
+      {pts:100,n:"RM5 "+(lang==="zh"?"\u836f\u623f\u4f18\u60e0\u5238":lang==="ms"?"baucar farmasi":"pharmacy voucher"),icon:"\ud83d\udcb0",desc:lang==="zh"?"\u8d2d\u4e70\u4fdd\u5065\u54c1\u6216\u7ef4\u751f\u7d20\u65f6\u53ef\u7528":lang==="ms"?"Untuk pembelian suplemen atau vitamin":"For supplements or vitamins purchase"},
+      {pts:150,n:lang==="zh"?"\u514d\u8d39\u836f\u5242\u5e08\u54a8\u8be215\u5206\u949f":lang==="ms"?"Konsultasi ahli farmasi 15 min percuma":"Free 15-min pharmacist consultation",icon:"\ud83d\udc68\u200d\u2695\ufe0f",desc:lang==="zh"?"\u4e00\u5bf9\u4e00\u7528\u836f\u68c0\u67e5\u548c\u5065\u5eb7\u5efa\u8bae":lang==="ms"?"Semakan ubat & nasihat kesihatan 1-ke-1":"One-on-one medication review & health advice"},
+      {pts:250,n:lang==="zh"?"\u514d\u8d39\u5065\u5eb7\u68c0\u67e5\u5957\u9910":lang==="ms"?"Pakej saringan kesihatan percuma":"Free health screening package",icon:"\ud83c\udfe5",desc:lang==="zh"?"BP+\u8840\u7cd6+BMI+\u8170\u56f4":lang==="ms"?"BP + gula + BMI + ukuran pinggang":"BP + sugar + BMI + waist measurement"},
+      {pts:500,n:"RM20 "+(lang==="zh"?"\u836f\u623f\u4f18\u60e0\u5238":lang==="ms"?"baucar farmasi":"pharmacy voucher"),icon:"\ud83c\udf81",desc:lang==="zh"?"\u53ef\u7528\u4e8e\u4efb\u4f55\u836f\u623f\u4ea7\u54c1":lang==="ms"?"Untuk apa-apa produk farmasi":"For any pharmacy product"}
+    ];
+    var redeemed=LS.g("ht-ph-redeemed")||{};
+    for(var ri=0;ri<phRewards.length;ri++){var pr=phRewards[ri];var canRedeem=pts>=pr.pts;var wasRedeemed=redeemed[ri];
+      h+='<div style="display:flex;align-items:center;padding:14px;background:'+(wasRedeemed?"#F5F5F0":canRedeem?"#E8F5E9":"#FAFAF8")+';border-radius:12px;margin-bottom:8px;border:1.5px solid '+(wasRedeemed?"#C4C0B8":canRedeem?"#4CAF50":"#E8E4DC")+'">';
+      h+='<span style="font-size:28px;margin-right:12px">'+pr.icon+'</span>';
+      h+='<div style="flex:1"><div style="font-weight:700;'+(wasRedeemed?"text-decoration:line-through;color:#C4C0B8":"")+'">'+pr.n+'</div>';
+      h+='<div style="font-size:11px;color:#8A8A8A;margin-top:2px">'+pr.desc+'</div>';
+      h+='<div style="font-size:11px;color:#8A8A8A;margin-top:2px">'+pr.pts+' '+(lang==="zh"?"\u79ef\u5206":lang==="ms"?"mata":"pts")+'</div></div>';
+      if(wasRedeemed)h+='<span style="font-size:12px;color:#C4C0B8">'+(lang==="zh"?"\u5df2\u5151\u6362":lang==="ms"?"Ditebus":"Redeemed")+'</span>';
+      else if(canRedeem)h+='<button onclick="redeemPharm('+ri+','+pr.pts+')" style="padding:8px 16px;border-radius:10px;background:#4CAF50;color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(lang==="zh"?"\u5151\u6362":lang==="ms"?"Tebus":"Redeem")+'</button>';
+      else h+='<span style="font-size:12px;color:#C4C0B8">'+(pr.pts-pts)+' '+(lang==="zh"?"\u8fd8\u9700":lang==="ms"?"lagi":"more")+'</span>';
       h+='</div>';}
-    h+='<div style="font-size:11px;color:#8A8A8A;text-align:center;margin-top:12px;line-height:1.6">'+(lang==="zh"?"\u5373\u5c06\u63a8\u51fa\u2014\u2014\u53c2\u4e0e\u836f\u623f\u53ef\u5151\u6362\u5956\u52b1\u3002\n\u7ee7\u7eed\u8d5a\u53d6\u79ef\u5206\uff01":lang==="ms"?"AKAN DATANG — Ganjaran akan tersedia di farmasi yang mengambil bahagian.\nTerus kumpul mata!":"COMING SOON — Rewards will be available at participating pharmacies.\nKeep earning points!")+'</div></div>';
+    h+='</div>';
+    h+='<div class="cd"><div class="ct">'+(lang==="zh"?"\u5982\u4f55\u8fd0\u4f5c":lang==="ms"?"Cara berfungsi":"How it works")+'</div>';
+    h+='<div style="font-size:13px;line-height:1.8;color:#5A5A5A">';
+    h+=(lang==="zh"?"1\ufe0f\u20e3 \u6bcf\u5929\u8bb0\u5f55\u5065\u5eb7\u6570\u636e\u8d5a\u79ef\u5206<br>2\ufe0f\u20e3 \u79ef\u5206\u8fbe\u5230\u540e\u70b9\u201c\u5151\u6362\u201d<br>3\ufe0f\u20e3 \u51fa\u793a\u6b64\u9875\u7ed9\u836f\u5242\u5e08<br>4\ufe0f\u20e3 \u836f\u5242\u5e08\u9a8c\u8bc1\u540e\u4eab\u53d7\u5956\u52b1":lang==="ms"?"1\ufe0f\u20e3 Rekod data kesihatan setiap hari untuk kumpul mata<br>2\ufe0f\u20e3 Tekan \"Tebus\" apabila mata cukup<br>3\ufe0f\u20e3 Tunjukkan halaman ini kepada ahli farmasi<br>4\ufe0f\u20e3 Ahli farmasi sahkan, anda nikmati ganjaran":"1\ufe0f\u20e3 Log health data daily to earn points<br>2\ufe0f\u20e3 Tap \"Redeem\" when you have enough<br>3\ufe0f\u20e3 Show this screen to your pharmacist<br>4\ufe0f\u20e3 Pharmacist verifies, you enjoy the reward")+'</div></div>';
+    h+='<div class="cd" style="border:2px dashed #3B7A6B"><div class="ct">'+(lang==="zh"?"\u836f\u5242\u5e08\u4e13\u533a":lang==="ms"?"Bahagian Ahli Farmasi":"For Pharmacists")+'</div>';
+    h+='<div style="font-size:12px;color:#5A5A5A;line-height:1.6">'+(lang==="zh"?"\u60a3\u8005\u901a\u8fc7\u6bcf\u5929\u8bb0\u5f55BP\u3001\u8840\u7cd6\u548c\u670d\u836f\u83b7\u5f97\u79ef\u5206\u3002\u4ee5\u4e0a30\u5929\u6570\u636e\u4e3a\u8bc1\u3002\u8bf7\u6838\u5b9e\u540e\u63d0\u4f9b\u5956\u52b1\u3002":lang==="ms"?"Pesakit memperoleh mata dengan merekod BP, gula darah dan ubat setiap hari. Data 30 hari di atas sebagai bukti. Sila sahkan sebelum beri ganjaran.":"Patient earns points by logging BP, sugar & meds daily. 30-day stats above serve as proof. Please verify before providing reward.")+'</div>';
+    h+='<div style="margin-top:10px"><button onclick="pharmacistVerify()" style="width:100%;padding:12px;background:#3B7A6B;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">'+(lang==="zh"?"\u2705 \u836f\u5242\u5e08\u786e\u8ba4\u5151\u6362":lang==="ms"?"\u2705 Ahli farmasi sahkan penebusan":"\u2705 Pharmacist: Confirm Redemption")+'</button></div></div>';
     h+='</div>';el.innerHTML=h;applyFontSize();return;
   }
+
   if(view==="rewards"){
     recalcPts();
     var allBadges=[
@@ -892,6 +930,7 @@ function render(){try{
   h+='<div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto">';
   h+='<button onclick="nav(\'rewards\')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid #E8E4DC;background:#fff;cursor:pointer;font-family:inherit;text-align:center"><div style="font-size:20px">\ud83c\udfc6</div><div style="font-size:11px;font-weight:600;color:#3B7A6B">'+pts+' pts</div></button>';
   h+='<button onclick="nav(\'emergency\')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid #E8E4DC;background:#fff;cursor:pointer;font-family:inherit;text-align:center"><div style="font-size:20px">\ud83d\udea8</div><div style="font-size:11px;font-weight:600;color:#D94F4F">'+(lang==="zh"?"\u7d27\u6025":lang==="ms"?"Kecemasan":"Emergency")+'</div></button>';
+  h+='<button onclick="nav(\'pharmacy\')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid #E8E4DC;background:#fff;cursor:pointer;font-family:inherit;text-align:center"><div style="font-size:20px">\ud83c\udfe5</div><div style="font-size:11px;font-weight:600;color:#3B7A6B">'+(lang==="zh"?"\u836f\u623f":lang==="ms"?"Farmasi":"Pharmacy")+'</div></button>';
   h+='<button onclick="genPDF()" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid #E8E4DC;background:#fff;cursor:pointer;font-family:inherit;text-align:center"><div style="font-size:20px">\ud83d\udcc4</div><div style="font-size:11px;font-weight:600;color:#5A6B8F">'+(lang==="zh"?"\u62a5\u544a":lang==="ms"?"Laporan":"Report")+'</div></button>';
   var dLeft=drDaysLeft();
   if(dLeft>=0)h+='<button onclick="nav(\'more\')" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid '+(dLeft<=3?"#D94F4F":"#E8E4DC")+';background:'+(dLeft<=3?"#FDEAEA":"#fff")+';cursor:pointer;font-family:inherit;text-align:center"><div style="font-size:20px">\ud83d\udc68\u200d\u2695\ufe0f</div><div style="font-size:11px;font-weight:600;color:'+(dLeft<=3?"#D94F4F":"#3B7A6B")+'">'+dLeft+(lang==="zh"?" \u5929":lang==="ms"?" hari":" days")+'</div></button>';
